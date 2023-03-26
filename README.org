@@ -1,0 +1,77 @@
+#+name: OPENAI_API_KEY
+#+begin_src text
+#+end_src
+
+#+begin_src restclient :noweb yes
+POST https://api.openai.com/v1/chat/completions
+Content-Type: application/json
+Authorization: Bearer <<OPENAI_API_KEY>>
+
+{
+  "model": "gpt-3.5-turbo",
+  "messages": [{"role": "user", "content": "Server-Sent Eventについて教えて"}]
+}
+#+end_src
+
+#+RESULTS:
+#+BEGIN_SRC js
+{
+  "id": "chatcmpl-6y6h7nkeCeGYK6IDdmumMtkJVc6dk",
+  "object": "chat.completion",
+  "created": 1679783433,
+  "model": "gpt-3.5-turbo-0301",
+  "usage": {
+    "prompt_tokens": 20,
+    "completion_tokens": 325,
+    "total_tokens": 345
+  },
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "Server-Sent Event（SSE）は、Webブラウザからサーバーに対してHTTPリクエストを送信し、サーバーからの応答を非同期的に受信するためのテクノロジーであり、また、Webブラウザが受信したデータを即座に表示できるようにするための方法でもあります。\n\nSSEは、通常、バックグラウンドで実行されるJavaScriptコードによって使用されます。ブラウザは、SSEを使用してサーバーからの更新を常に受信することができ、ネットワーク負荷を軽減しながら、リアルタイムな情報にアクセスすることができます。\n\nSSEでは、HTTPリクエストとは異なり、サーバーから複数のレスポンスが送信されます。これにより、リアルタイムで更新されるデータを受信し、表示することができます。また、SSEはWebSocketと同様に、サーバー側でプッシュ通知を実現するための手段としても使用されます。"
+      },
+      "finish_reason": "stop",
+      "index": 0
+    }
+  ]
+}
+
+// POST https://api.openai.com/v1/chat/completions
+// HTTP/1.1 200 OK
+// Date: Sat, 25 Mar 2023 22:30:46 GMT
+// Content-Type: application/json
+// Transfer-Encoding: chunked
+// Connection: keep-alive
+// Access-Control-Allow-Origin: *
+// Cache-Control: no-cache, must-revalidate
+// Openai-Model: gpt-3.5-turbo-0301
+// Openai-Organization: user-8n2o0u2bci7edg52ogz5hxvo
+// Openai-Processing-Ms: 13219
+// Openai-Version: 2020-10-01
+// Strict-Transport-Security: max-age=15724800; includeSubDomains
+// X-Ratelimit-Limit-Requests: 20
+// X-Ratelimit-Remaining-Requests: 19
+// X-Ratelimit-Reset-Requests: 3s
+// X-Request-Id: e64c82e7f4918f0d15ef0940b63b7bde
+// Request duration: 14.670129s
+#+END_SRC
+
+#+begin_src chat-ai
+hoge
+#+end_src
+
+#+RESULTS:
+#+begin_example
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100   590  100   476  100   114    767    183 --:--:-- --:--:-- --:--:--   950100   590  100   476  100   114    767    183 --:--:-- --:--:-- --:--:--   950
+{
+    "error": {
+        "message": "We could not parse the JSON body of your request. (HINT: This likely means you aren't using your HTTP library correctly. The OpenAI API expects a JSON payload, but what was sent was not valid JSON. If you have trouble figuring out how to fix this, please send an email to support@openai.com and include any relevant code you'd like help with.)",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": null
+    }
+}
+#+end_example
