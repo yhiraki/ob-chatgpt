@@ -6,7 +6,8 @@
 (defvar org-babel-default-header-args:chatgpt
   '((:role . "user")
 	(:session . "default")
-	(:results . "raw")))
+	(:results . "raw")
+	(:eval . "no-export")))
 
 (defun org-babel-chatgpt-build-command (body)
   (mapconcat
