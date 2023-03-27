@@ -1,42 +1,56 @@
-(defcustom ob-chatgpt-api-token "")
+(defcustom org-babel-chatgpt-model "gpt-3.5-turbo"
+  "Default model.")
+(defcustom org-babel-chatgpt-api-token ""
+  "OpenAPI token.")
 
 (defvar org-babel-default-header-args:chatgpt
   '((:role . "user")
-	(:wrap . "src markdown :role assistant")))
+	(:session . "default")
+	(:results . "raw")))
 
-(defun ob-chatgpt-build-command (body)
+(defun org-babel-chatgpt-build-command (body)
   (mapconcat
    #'shell-quote-argument
    `("curl" "https://api.openai.com/v1/chat/completions"
 	 "-s"
 	 "-H" "Content-Type: application/json"
-	 "-H" ,(format "Authorization: Bearer %s" ob-chatgpt-api-token)
+	 "-H" ,(format "Authorization: Bearer %s" org-babel-chatgpt-api-token)
 	 "-d" ,(json-encode-alist
-			`(:model "gpt-3.5-turbo" :messages ,(ob-chatgpt-get-all-code-blocks)))
- ) " "))
+			`(:model ,org-babel-chatgpt-model :messages ,(org-babel-chatgpt-get-all-code-blocks))))
+   " "))
 
-(defun ob-chatgpt-execute-command (cmd)
+(defun org-babel-chatgpt-execute-command (cmd)
   "Exec CMD and extract response."
-  (let* ((result (shell-command-to-string (ob-chatgpt-build-command body)))
+  (let* ((result (shell-command-to-string (org-babel-chatgpt-build-command body)))
 		 (response (json-read-from-string result)))
 	(cdr (assq 'content (car (aref (cdr (assq 'choices response)) 0))))))
 
 (defun org-babel-execute:chatgpt (body params)
-  "Execute a block of Chat."
-  (ob-chatgpt-execute-command (ob-chatgpt-build-command body)))
+  "Execute a block of ChatGPT."
+  (let ((result (org-babel-chatgpt-execute-command (org-babel-chatgpt-build-command body))))
+	(concat
+	 "#+BEGIN_SRC markdown "
+	 (format ":session %s :role assistant\n" (cdr (assq :session params)))
+	 result "\n"
+	 "#+END_SRC\n"
+	 )))
 
-(defun ob-chatgpt-get-all-code-blocks ()
+(defun org-babel-chatgpt-get-all-code-blocks ()
   "Get all code blocks for chat."
   (interactive)
   (let* ((blocks '())
 		(current-info (org-babel-get-src-block-info))
 		(current-value (nth 1 current-info))
+		(current-session (cdr (assq :session (nth 2 current-info))))
 		(stop nil))
 	(org-babel-map-src-blocks (buffer-file-name)
 	  (let* ((info (org-babel-get-src-block-info))
 			 (role (assq :role (nth 2 info)))
+			 (session (cdr (assq :session (nth 2 info))))
 			 (value (nth 1 info)))
-		(when (and role (not stop))
+		(when (and role
+				   (not stop)
+				   (string= session current-session))
 		  (push `(,role (:content . ,value)) blocks))
 		(when (string= value current-value)
 		  (setq stop t))
