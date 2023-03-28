@@ -1,15 +1,27 @@
+(require 'json)
+(require 'ob)
+
 (defcustom org-babel-chatgpt-model "gpt-3.5-turbo"
-  "Default model.")
+  "Default model."
+  :type 'string
+  :group 'org-babel-chatgpt)
+
 (defcustom org-babel-chatgpt-api-token ""
-  "OpenAPI token.")
+  "OpenAPI token."
+  :type 'string
+  :group 'org-babel-chatgpt)
 
 (defvar org-babel-default-header-args:chatgpt
-  '((:role . "user")
-	(:session . "default")
+  '(
+	(:eval . "no-export")
+	(:exports . "both")
 	(:results . "raw")
-	(:eval . "no-export")))
+	(:role . "user")
+	(:session . "default")
+	))
 
 (defun org-babel-chatgpt-build-command (body)
+  "Build a command using BODY for fetch OpenAI API."
   (mapconcat
    #'shell-quote-argument
    `("curl" "https://api.openai.com/v1/chat/completions"
@@ -22,6 +34,8 @@
 
 (defun org-babel-chatgpt-execute-command (cmd)
   "Exec CMD and extract response."
+  (when (string= org-babel-chatgpt-api-token "")
+	(error "API TOKEN is not set.  Please set a value for `org-babel-chatgpt-api-token`"))
   (let* ((result (shell-command-to-string (org-babel-chatgpt-build-command body)))
 		 (response (json-read-from-string result)))
 	(cdr (assq 'content (car (aref (cdr (assq 'choices response)) 0))))))
