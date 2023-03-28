@@ -6,7 +6,7 @@
   :type 'string
   :group 'org-babel-chatgpt)
 
-(defcustom org-babel-chatgpt-api-token ""
+(defcustom org-babel-chatgpt-api-token nil
   "OpenAPI token."
   :type 'string
   :group 'org-babel-chatgpt)
@@ -34,7 +34,7 @@
 
 (defun org-babel-chatgpt-execute-command (cmd)
   "Exec CMD and extract response."
-  (when (string= org-babel-chatgpt-api-token "")
+  (unless org-babel-chatgpt-api-token
 	(error "API TOKEN is not set.  Please set a value for `org-babel-chatgpt-api-token`"))
   (let* ((result (shell-command-to-string (org-babel-chatgpt-build-command body)))
 		 (response (json-read-from-string result)))
