@@ -20,25 +20,24 @@
 	(:session . "default")
 	))
 
-(defun org-babel-chatgpt-build-command (body)
-  "Build a command using BODY for fetch OpenAI API."
-  (mapconcat
-   #'shell-quote-argument
-   `("curl" "https://api.openai.com/v1/chat/completions"
-	 "-s"
-	 "-H" "Content-Type: application/json"
-	 "-H" ,(format "Authorization: Bearer %s" org-babel-chatgpt-api-token)
-	 "-d" ,(json-encode-alist
-			`(:model ,org-babel-chatgpt-model :messages ,(org-babel-chatgpt-get-all-code-blocks))))
-   " "))
-
 (defun org-babel-chatgpt-execute-command (cmd)
   "Exec CMD and extract response."
   (unless org-babel-chatgpt-api-token
 	(error "API TOKEN is not set.  Please set a value for `org-babel-chatgpt-api-token`"))
-  (let* ((result (shell-command-to-string (org-babel-chatgpt-build-command body)))
-		 (response (json-read-from-string result)))
-	(cdr (assq 'content (car (aref (cdr (assq 'choices response)) 0))))))
+  (let* ((url-request-method "POST")
+		 (url-request-extra-headers
+		  `(("Content-Type" . "application/json")
+			("Authorization" . ,(format "Bearer %s" org-babel-chatgpt-api-token))))
+		 (url-request-data (json-encode-alist
+							`(:model ,org-babel-chatgpt-model :messages ,(org-babel-chatgpt-get-all-code-blocks)))))
+	(message url-request-data)
+	(with-current-buffer (url-retrieve-synchronously "https://api.openai.com/v1/chat/completions")
+	  (goto-char (point-min))
+	  (search-forward-regexp "\n\n")
+	  (let* ((response-json (buffer-substring-no-properties (point) (point-max)))
+			 (data (json-read-from-string response-json)))
+		(message response-json)
+		(cdr (assq 'content (car (aref (cdr (assq 'choices data)) 0))))))))
 
 (defun org-babel-execute:chatgpt (body params)
   "Execute a block of ChatGPT."
