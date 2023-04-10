@@ -36,10 +36,10 @@
 	(:session . "default")
 	))
 
-(defun org-babel-chatgpt-build-command (body)
+(defun org-babel-chatgpt-build-command (params)
   "Build a command using BODY for fetch OpenAI API."
   (let* ((info (org-babel-get-src-block-info))
-		 (session (cdr (assq :session (nth 2 info)))))
+		 (current-session (cdr (assq :session params))))
 	(mapcar
 	 #'shell-quote-argument
 	 `("curl" "https://api.openai.com/v1/chat/completions"
@@ -47,7 +47,7 @@
 	   "-H" "Content-Type: application/json"
 	   "-H" ,(format "Authorization: Bearer %s" org-babel-chatgpt-api-token)
 	   "-d" ,(json-encode-alist
-			  `(:model ,org-babel-chatgpt-model :messages ,(org-babel-chatgpt-get-chat-session session))))
+			  `(:model ,org-babel-chatgpt-model :messages ,(org-babel-chatgpt-get-chat-session current-session))))
 	 )))
 
 (defun org-babel-chatgpt-execute-command (cmd)
@@ -61,27 +61,13 @@
 
 (defun org-babel-execute:chatgpt (body params)
   "Execute a block of ChatGPT."
-  (let ((result (org-babel-chatgpt-execute-command (s-join " " (org-babel-chatgpt-build-command body)))))
+  (let* ((result (org-babel-chatgpt-execute-command (s-join " " (org-babel-chatgpt-build-command params)))))
 	(concat
 	 "#+BEGIN_SRC markdown "
 	 (format ":session %s :role assistant\n" (cdr (assq :session params)))
 	 result "\n"
 	 "#+END_SRC\n"
 	 )))
-
-(require 'async)
-
-(defun org-babel-execute:chatgpt-async (body params)
-  ""
-  (let* ((cmd (org-babel-chatgpt-build-command body))
-		 (args (append
-				`("chatgpt"
-				  ,(car cmd)
-				  (lambda (x)
-					(message "ret:%s" (buffer-string))))
-				(cdr cmd))))
-	(apply #'async-start-process args)))
-
 
 (defun org-babel-chatgpt-get-all-code-blocks ()
   "Get all code blocks for chat."
@@ -107,16 +93,20 @@
 
 (defun org-babel-chatgpt-get-chat-session (current-session)
   "Get all code blocks with SESSION for chat."
+  (require 'org-element)
   (let ((blocks '())
 		(stop nil))
 	(org-element-map (org-element-parse-buffer) '(src-block example-block)
 	  (lambda (src-block)
 		(let* ((info (org-babel-get-src-block-info))
-			   (role (assq :role (nth 2 info)))
-			   (session (cdr (assq :session (nth 2 info))))
-			   (value (nth 1 info)))
-		  (when (and (equal current-session session))
-			(push `(,role (:content . ,(org-element-property :value src-block))) blocks))
+			   (params1 (nth 2 info))
+			   (params2 (org-babel-parse-header-arguments (org-element-property :parameters src-block)))  ; TODO: src-block以外の場合はpropertyを取得することができない
+			   (params (append params1 params2))
+			   (role (assq :role params))
+			   (session (cdr (assq :session params)))
+			   (value (org-element-property :value src-block)))
+		  (when (string= current-session session)
+			(push `(,role (:content . ,value)) blocks))
 		  (setq current-value (org-element-property :value src-block))
 		  ))
 	  )
