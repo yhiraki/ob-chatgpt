@@ -1,3 +1,18 @@
+;;; ob-chatgpt.el --- Handle custom path schemes defined in `schemes.txt'
+
+;; Author: yhiraki <coffexpr@gmail.com>
+;; Version: 0.0.1
+;; Homepage: https://github.com/yhiraki/ob-chatgpt
+;; Keywords: chatgpt openai
+;; Package-Requires: ((emacs "28.1"))
+;; License: MIT
+
+;;; Commentary:
+
+;; `ob-chatgpt.el' is a package for using chatgpt in org-mode.
+
+;;; Code:
+
 (require 'json)
 (require 'ob)
 
