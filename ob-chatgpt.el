@@ -1,4 +1,4 @@
-;;; ob-chatgpt.el --- Handle custom path schemes defined in `schemes.txt'
+;;; ob-chatgpt.el
 
 ;; Author: yhiraki <coffexpr@gmail.com>
 ;; Version: 0.0.1
