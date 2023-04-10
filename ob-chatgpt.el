@@ -86,3 +86,7 @@
 		  (setq stop t))
 		))
 	(reverse blocks)))
+
+(provide 'ob-chatgpt)
+
+;;; ob-chatgpt.el ends here
