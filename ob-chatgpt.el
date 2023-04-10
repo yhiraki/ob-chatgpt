@@ -38,15 +38,17 @@
 
 (defun org-babel-chatgpt-build-command (body)
   "Build a command using BODY for fetch OpenAI API."
-  (mapcar
-   #'shell-quote-argument
-   `("curl" "https://api.openai.com/v1/chat/completions"
-	 "-s"
-	 "-H" "Content-Type: application/json"
-	 "-H" ,(format "Authorization: Bearer %s" org-babel-chatgpt-api-token)
-	 "-d" ,(json-encode-alist
-			`(:model ,org-babel-chatgpt-model :messages ,(org-babel-chatgpt-get-all-code-blocks))))
-   ))
+  (let* ((info (org-babel-get-src-block-info))
+		 (session (cdr (assq :session (nth 2 info)))))
+	(mapcar
+	 #'shell-quote-argument
+	 `("curl" "https://api.openai.com/v1/chat/completions"
+	   "-s"
+	   "-H" "Content-Type: application/json"
+	   "-H" ,(format "Authorization: Bearer %s" org-babel-chatgpt-api-token)
+	   "-d" ,(json-encode-alist
+			  `(:model ,org-babel-chatgpt-model :messages ,(org-babel-chatgpt-get-chat-session session))))
+	 )))
 
 (defun org-babel-chatgpt-execute-command (cmd)
   "Exec CMD and extract response."
@@ -101,6 +103,23 @@
 		(when (string= value current-value)
 		  (setq stop t))
 		))
+	(reverse blocks)))
+
+(defun org-babel-chatgpt-get-chat-session (current-session)
+  "Get all code blocks with SESSION for chat."
+  (let ((blocks '())
+		(stop nil))
+	(org-element-map (org-element-parse-buffer) '(src-block example-block)
+	  (lambda (src-block)
+		(let* ((info (org-babel-get-src-block-info))
+			   (role (assq :role (nth 2 info)))
+			   (session (cdr (assq :session (nth 2 info))))
+			   (value (nth 1 info)))
+		  (when (and (equal current-session session))
+			(push `(,role (:content . ,(org-element-property :value src-block))) blocks))
+		  (setq current-value (org-element-property :value src-block))
+		  ))
+	  )
 	(reverse blocks)))
 
 (provide 'ob-chatgpt)
