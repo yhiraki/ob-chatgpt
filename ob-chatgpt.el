@@ -15,6 +15,7 @@
 
 (require 'json)
 (require 'ob)
+(require 's)
 
 (defcustom org-babel-chatgpt-model "gpt-3.5-turbo"
   "Default model."
