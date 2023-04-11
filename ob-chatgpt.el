@@ -27,19 +27,33 @@
   :type 'string
   :group 'org-babel-chatgpt)
 
+(defun org-babel-chatgpt-initialize ()
+  "Initialize."
+  (mapc (lambda (a)
+		  (org-babel-make-language-alias a "chatgpt"))
+		org-babel-chatgpt-aliases))
+
+(defcustom org-babel-chatgpt-aliases '()
+  "Aliases."
+  :type 'list
+  :group 'org-babel-chatgpt
+  :set (lambda (var val)
+		 (set var val)
+		 (org-babel-chatgpt-initialize)))
+
 (defvar org-babel-default-header-args:chatgpt
   '(
 	(:eval . "no-export")
 	(:exports . "both")
-	(:results . "raw")
+	(:wrap . "src markdown")
 	(:role . "user")
-	(:session . "default")
+	(:thread . "default")
 	))
 
 (defun org-babel-chatgpt-build-command (params)
   "Build a command using BODY for fetch OpenAI API."
   (let* ((info (org-babel-get-src-block-info))
-		 (current-session (cdr (assq :session params))))
+		 (current-thread (cdr (assq :thread params))))
 	(mapcar
 	 #'shell-quote-argument
 	 `("curl" "https://api.openai.com/v1/chat/completions"
@@ -47,7 +61,7 @@
 	   "-H" "Content-Type: application/json"
 	   "-H" ,(format "Authorization: Bearer %s" org-babel-chatgpt-api-token)
 	   "-d" ,(json-encode-alist
-			  `(:model ,org-babel-chatgpt-model :messages ,(org-babel-chatgpt-get-chat-session current-session))))
+			  `(:model ,org-babel-chatgpt-model :messages ,(org-babel-chatgpt-get-chat-thread current-thread))))
 	 )))
 
 (defun org-babel-chatgpt-execute-command (cmd)
@@ -61,54 +75,45 @@
 
 (defun org-babel-execute:chatgpt (body params)
   "Execute a block of ChatGPT."
-  (let* ((result (org-babel-chatgpt-execute-command (s-join " " (org-babel-chatgpt-build-command params)))))
-	(concat
-	 "#+BEGIN_SRC markdown "
-	 (format ":session %s :role assistant\n" (cdr (assq :session params)))
-	 result "\n"
-	 "#+END_SRC\n"
-	 )))
+  (let ((result (org-babel-chatgpt-execute-command (s-join " " (org-babel-chatgpt-build-command params)))))
+	result))
 
-(defun org-babel-chatgpt-get-all-code-blocks ()
-  "Get all code blocks for chat."
-  (interactive)
-  (let* ((blocks '())
-		 (current-info (org-babel-get-src-block-info))
-		 (current-value (nth 1 current-info))
-		 (current-session (cdr (assq :session (nth 2 current-info))))
-		 (stop nil))
-	(org-babel-map-src-blocks (buffer-file-name)
-	  (let* ((info (org-babel-get-src-block-info))
-			 (role (assq :role (nth 2 info)))
-			 (session (cdr (assq :session (nth 2 info))))
-			 (value (nth 1 info)))
-		(when (and role
-				   (not stop)
-				   (string= session current-session))
-		  (push `(,role (:content . ,value)) blocks))
-		(when (string= value current-value)
-		  (setq stop t))
-		))
-	(reverse blocks)))
+(defun org-babel-chatgpt-read-src-block-result-value ()
+  "Read result block."
+  (save-excursion
+	(let ((c (org-babel-where-is-src-block-result)))
+	  (when c
+		(goto-char c)
+		(let ((result (org-babel-read-result)))
+		  result)))))
 
-(defun org-babel-chatgpt-get-chat-session (current-session)
-  "Get all code blocks with SESSION for chat."
+(defun org-babel-chatgpt-get-chat-thread (current-thread)
+  "Get all code blocks with CURRENT-THREAD for chat."
   (require 'org-element)
   (let ((blocks '()))
-	(org-element-map (org-element-parse-buffer) '(src-block example-block)
+	(org-element-map (org-element-parse-buffer) 'src-block
 	  (lambda (block)
 		(let* ((info (org-babel-get-src-block-info t block))
-			   (params1 (nth 2 info))
-			   (params2 (org-babel-parse-header-arguments (org-element-property :switches block))) ; for example-block
-			   (params (append params1 params2))
+			   (params (nth 2 info))
 			   (role (assq :role params))
-			   (session (cdr (assq :session params)))
-			   (value (org-element-property :value block)))
-		  (when (string= current-session session)
-			(push `(,role (:content . ,value)) blocks))
-		  )
-		))
+			   (thread (cdr (assq :thread params)))
+			   (value (org-element-property :value block))
+			   (lang (org-element-property :language block)))
+		  (message "%s" lang)
+		  (when (or (string= lang "chatgpt")
+					(find lang org-babel-chatgpt-aliases :test #'equal))
+			(save-excursion
+			  (goto-char (org-element-property :begin block))
+			  (when (string= current-thread thread)
+				(push `(,role (:content . ,value)) blocks))
+			  (let ((result (org-babel-chatgpt-read-src-block-result-value)))
+				(when result
+				  (push `((:role . assistant) (:content . ,result)) blocks)
+				  ))))))
+	  )
 	(reverse blocks)))
+
+(org-babel-chatgpt-initialize)
 
 (provide 'ob-chatgpt)
 
