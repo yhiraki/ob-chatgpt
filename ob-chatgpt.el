@@ -1,4 +1,4 @@
-;;; ob-chatgpt.el
+;;; ob-chatgpt.el --- An org-babel plugin that enables conversing with chatgpt.
 
 ;; Author: yhiraki <coffexpr@gmail.com>
 ;; Version: 0.0.1
