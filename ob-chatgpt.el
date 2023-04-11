@@ -48,6 +48,7 @@
 	(:wrap . "src markdown")
 	(:role . "user")
 	(:thread . "default")
+	(:to-org . nil)
 	))
 
 (defun org-babel-chatgpt-build-command (params)
@@ -64,19 +65,42 @@
 			  `(:model ,org-babel-chatgpt-model :messages ,(org-babel-chatgpt-get-chat-thread current-thread))))
 	 )))
 
+(defun org-babel-chatgpt-add-backticks-spaces (str)
+  "Add spaces around backticks in STR."
+  (replace-regexp-in-string " ?`\\([^`'\n]+\\)` ?" " `\\1` " str))
+
 (defun org-babel-chatgpt-execute-command (cmd)
   "Exec CMD and extract response."
   (unless org-babel-chatgpt-api-token
 	(error "API TOKEN is not set.  Please set a value for `org-babel-chatgpt-api-token`"))
   (let* ((result (shell-command-to-string cmd))
 		 (response (json-read-from-string result)))
+	(message "%s" cmd)
 	(message "%s" response)
 	(cdr (assq 'content (car (aref (cdr (assq 'choices response)) 0))))))
 
 (defun org-babel-execute:chatgpt (body params)
   "Execute a block of ChatGPT."
-  (let ((result (org-babel-chatgpt-execute-command (s-join " " (org-babel-chatgpt-build-command params)))))
-	result))
+  (let ((result (org-babel-chatgpt-execute-command (s-join " " (org-babel-chatgpt-build-command params))))
+		(to-org (cdr (assq :to-org params))))
+	(if to-org
+		(progn
+		  (let* ((in-file (org-babel-temp-file "chatgpt-md-"))
+				(out-file (org-babel-temp-file "chatgpt-org-"))
+				(cmd (mapconcat
+					  #'identity
+					  `("pandoc"
+						"-t" "org"
+						"-f" "markdown"
+						,in-file)
+					  " ")))
+			(unless (executable-find "pandoc")
+			  (error "Command \"pandoc\" not found"))
+			(with-temp-file in-file (insert (org-babel-chatgpt-add-backticks-spaces result)))
+			(message "%s" cmd)
+			(org-babel-eval cmd "")
+			))
+	  result)))
 
 (defun org-babel-chatgpt-read-src-block-result-value ()
   "Read result block."
@@ -101,7 +125,7 @@
 			   (lang (org-element-property :language block)))
 		  (message "%s" lang)
 		  (when (or (string= lang "chatgpt")
-					(find lang org-babel-chatgpt-aliases :test #'equal))
+					(member lang org-babel-chatgpt-aliases))
 			(save-excursion
 			  (goto-char (org-element-property :begin block))
 			  (when (string= current-thread thread)
