@@ -1,1 +1,103 @@
 * ob-chatgpt
+Conversing with chatgpt in org-mode babel.
+** Requirements
+- curl
+- pandoc (When =:to-org= option is used)
+** Setup
+#+begin_src sh
+  git clone https://github.com/yhiraki/ob-chatgpt
+#+end_src
+#+begin_src elisp
+(use-package ob-chatgpt
+  :load-path "path/to/ob-chatgpt"
+  :custom
+  (org-babel-chatgpt-api-token "<YOUR API TOKEN>"))
+#+end_src
+** Options
+| option  | default   | description                                    |
+|---------+-----------+------------------------------------------------|
+| =:thread= | =default= | Name to determine as a continuous conversation |
+| =:to-org= | =nil=       | Convert ChatGPT response to org format         |
+** Examples
+*** Basic usage
+#+begin_src org
+  ,#+begin_src chatgpt
+  What is org-babel?
+  ,#+end_src
+
+  ,#+RESULTS:
+  ,#+begin_src markdown
+  Org-babel is a plugin for the Emacs text editor that allows users to embed and execute code blocks in various programming languages within an org-mode document. It can be used for literate programming, code documentation, and data analysis. Org-babel supports many different languages, including R, Python, JavaScript, Ruby, and more. It also provides functionality for working with databases and external processes, such as shell scripts or command line tools. The results of code execution can be displayed inline in the document, exported to various formats like HTML or PDF, or used to generate graphs and tables.
+  ,#+end_src
+
+  ,#+begin_src chatgpt
+  Gime me an example.
+  ,#+end_src
+
+  ,#+RESULTS:
+  ,#+begin_src markdown
+  Org-babel, short for "org-mode babel", is a component of the Emacs text editor designed for working with code in org-mode files. It enables you to embed code chunks in org-mode documents, which can be evaluated or executed directly from within Emacs.
+
+  For example, you can embed a code block of R language in an org-mode file as follows:
+
+  ```
+  ,,#+BEGIN_SRC R
+  x <- runif(10)
+  mean(x)
+  ,,#+END_SRC
+  ```
+
+  By pressing `C-c C-c`, you can evaluate and execute this code block to calculate and display the mean of 10 random numbers in R. This can be used for a lot of different programming languages like Python, Matlab, C++ and many more.
+  ,#+end_src
+#+end_src
+*** Add an aliases to src block language
+#+begin_src elisp
+(setq org-babel-chatgpt-aliases '("ask"))
+#+end_src
+
+#+begin_src org
+  ,#+begin_src ask
+  hi
+  ,#+end_src
+#+end_src
+*** Use [[https://github.com/astahlman/ob-async][ob-async]]
+#+begin_src org
+  ,#+begin_src ask :async
+  hi
+  ,#+end_src
+
+  ,#+RESULTS:
+  : 10f09e4b34c8833191c39face33f2a06
+#+end_src
+*** Result as quote block with org
+#+begin_src org
+  ,#+begin_src chatgpt :to-org t :wrap quote
+  Write a function for sum of 1 to 10 in Python.
+  ,#+end_src
+
+  ,#+RESULTS:
+  ,#+begin_quote
+  Here's one way to write a function in Python that sums the numbers from
+  1 to 10:
+
+  ,#+begin_src python
+  def sum_of_1_to_10():
+      sum = 0
+      for i in range(1, 11):
+          sum += i
+      return sum
+  ,#+end_src
+
+  This function first initializes a sum variable to 0. It then uses a for
+  loop to iterate over the range of numbers from 1 to 10 (inclusive),
+  adding each number to the sum variable as it goes. Finally, the function
+  returns the total sum.
+
+  To use this function, you simply need to call it:
+
+  ,#+begin_src python
+  total = sum_of_1_to_10()
+  print(total)  # Output: 55
+  ,#+end_src
+  ,#+end_quote
+#+end_src
