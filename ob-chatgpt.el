@@ -106,12 +106,11 @@
 
 (defun org-babel-chatgpt-read-src-block-result-value ()
   "Read result block."
-  (save-excursion
-	(let ((c (org-babel-where-is-src-block-result)))
-	  (when c
+  (let ((c (org-babel-where-is-src-block-result)))
+	(when c
+	  (save-excursion
 		(goto-char c)
-		(let ((result (org-babel-read-result)))
-		  result)))))
+		(org-babel-read-result)))))
 
 (defun org-babel-chatgpt-get-chat-thread (current-thread &optional current-body)
   "Get all code blocks with CURRENT-THREAD for chat."
@@ -128,22 +127,18 @@
 				 (value (org-element-property :value block))
 				 (lang (org-element-property :language block))
 				 (body (nth 1 info)))
-			(when (or (string= lang "chatgpt")
-					  (member lang org-babel-chatgpt-aliases))
-			  (save-excursion
-				(goto-char (org-element-property :begin block))
-				(when (string= current-thread thread)
-				  (push `(,role (:content . ,value)) blocks)
-				  (if (and current-body (string= current-body body))
-					  (setq stop t)
-					(let ((result (org-babel-chatgpt-read-src-block-result-value)))
-					  (when result
-						(push `((:role . assistant) (:content . ,result)) blocks)
-						))))))
-			)
-		  )
-		)
-	  )
+			(when (and (or (string= lang "chatgpt")
+						   (member lang org-babel-chatgpt-aliases))
+					   (string= current-thread thread))
+			  (push `(,role (:content . ,value)) blocks)
+			  (if (and current-body (string= current-body body))
+				  (setq stop t)
+				(save-excursion
+				  (goto-char (org-element-property :begin block))
+				  (let ((result (org-babel-chatgpt-read-src-block-result-value)))
+					(when result
+					  (push `((:role . assistant) (:content . ,result)) blocks)
+					  )))))))))
 	(reverse blocks)))
 
 (org-babel-chatgpt-initialize)
