@@ -51,10 +51,9 @@
 	(:to-org . nil)
 	))
 
-(defun org-babel-chatgpt-build-command (params)
+(defun org-babel-chatgpt-build-command (messages)
   "Build a command using BODY for fetch OpenAI API."
-  (let* ((info (org-babel-get-src-block-info))
-		 (current-thread (cdr (assq :thread params))))
+  (let* ((info (org-babel-get-src-block-info)))
 	(mapcar
 	 #'shell-quote-argument
 	 `("curl" "https://api.openai.com/v1/chat/completions"
@@ -62,7 +61,7 @@
 	   "-H" "Content-Type: application/json"
 	   "-H" ,(format "Authorization: Bearer %s" org-babel-chatgpt-api-token)
 	   "-d" ,(json-encode-alist
-			  `(:model ,org-babel-chatgpt-model :messages ,(org-babel-chatgpt-get-chat-thread current-thread))))
+			  `(:model ,org-babel-chatgpt-model :messages ,messages)))
 	 )))
 
 (defun org-babel-chatgpt-add-backticks-spaces (str)
@@ -81,8 +80,11 @@
 
 (defun org-babel-execute:chatgpt (body params)
   "Execute a block of ChatGPT."
-  (let ((result (org-babel-chatgpt-execute-command (s-join " " (org-babel-chatgpt-build-command params))))
-		(to-org (cdr (assq :to-org params))))
+  (let* ((current-thread (cdr (assq :thread params)))
+		 (messages (org-babel-chatgpt-get-chat-thread current-thread))
+		 (cmd (s-join " " (org-babel-chatgpt-build-command messages)))
+		 (result (org-babel-chatgpt-execute-command cmd))
+		 (to-org (cdr (assq :to-org params))))
 	(if to-org
 		(progn
 		  (let* ((in-file (org-babel-temp-file "chatgpt-md-"))
