@@ -50,7 +50,7 @@ Conversing with chatgpt in org-mode babel.
   By pressing `C-c C-c`, you can evaluate and execute this code block to calculate and display the mean of 10 random numbers in R. This can be used for a lot of different programming languages like Python, Matlab, C++ and many more.
   ,#+end_src
 #+end_src
-*** Add an aliases to src block language
+*** Add aliases to src block language
 #+begin_src elisp
 (setq org-babel-chatgpt-aliases '("ask"))
 #+end_src
