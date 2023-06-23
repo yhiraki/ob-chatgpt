@@ -76,7 +76,7 @@
 		 (response (json-read-from-string result)))
 	(message "%s" cmd)
 	(message "%s" response)
-	(cdr (assq 'content (car (aref (cdr (assq 'choices response)) 0))))))
+    (cdr (assq 'content (assq 'message (aref (cdr (assq 'choices response)) 0))))))
 
 (defun org-babel-execute:chatgpt (body params)
   "Execute a block of ChatGPT."
