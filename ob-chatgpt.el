@@ -51,7 +51,7 @@
 	(:to-org . nil)
 	))
 
-(defun org-babel-chatgpt-build-command (messages)
+(defun org-babel-chatgpt-build-command (messages model)
   "Build a command using BODY for fetch OpenAI API."
   (let* ((info (org-babel-get-src-block-info)))
 	(mapcar
@@ -61,7 +61,7 @@
 	   "-H" "Content-Type: application/json"
 	   "-H" ,(format "Authorization: Bearer %s" org-babel-chatgpt-api-token)
 	   "-d" ,(json-encode-alist
-			  `(:model ,org-babel-chatgpt-model :messages ,messages)))
+			  `(:model ,model :messages ,messages)))
 	 )))
 
 (defun org-babel-chatgpt-add-backticks-spaces (str)
@@ -82,7 +82,8 @@
   "Execute a block of ChatGPT."
   (let* ((current-thread (cdr (assq :thread params)))
 		 (messages (org-babel-chatgpt-get-chat-thread current-thread body))
-		 (cmd (s-join " " (org-babel-chatgpt-build-command messages)))
+		 (model (or (cdr (assq :model params)) org-babel-chatgpt-model))
+		 (cmd (s-join " " (org-babel-chatgpt-build-command messages model)))
 		 (result (org-babel-chatgpt-execute-command cmd))
 		 (to-org (cdr (assq :to-org params))))
 	(if to-org
