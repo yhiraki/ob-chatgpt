@@ -95,8 +95,8 @@
           (forward-line)
           (when (org-babel-when-in-src-block)
             (end-of-line)
-            (insert (format " :chatgpt-result t :thread %s" current-thread))
-            (forward-line))
+            (insert (format " :chatgpt-result t :thread %s" current-thread)))
+          (forward-line)
           (chatgpt-response-parse-and-insert
            (buffer-name) (point)
            (chatgpt-request chatgpt-url-chat (chatgpt-request-data messages)))))
