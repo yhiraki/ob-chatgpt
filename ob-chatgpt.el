@@ -29,6 +29,14 @@
   :type 'string
   :group 'org-babel-chatgpt)
 
+(defvar org-babel-chatgpt-aliases nil)
+
+(defun org-babel-chatgpt-initialize ()
+  "Initialize."
+  (mapc (lambda (a)
+          (org-babel-make-language-alias a "chatgpt"))
+        org-babel-chatgpt-aliases))
+
 (defcustom org-babel-chatgpt-aliases '()
   "Aliases."
   :type 'list
@@ -36,12 +44,6 @@
   :set (lambda (var val)
          (set var val)
          (org-babel-chatgpt-initialize)))
-
-(defun org-babel-chatgpt-initialize ()
-  "Initialize."
-  (mapc (lambda (a)
-          (org-babel-make-language-alias a "chatgpt"))
-        org-babel-chatgpt-aliases))
 
 (defvar org-babel-default-header-args:chatgpt
   '(
