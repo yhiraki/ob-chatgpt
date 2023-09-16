@@ -13,10 +13,11 @@
 
 ;;; Code:
 
+(require 'chatgpt)
 (require 'json)
 (require 'ob)
+(require 'org-element)
 (require 's)
-(require 'chatgpt)
 
 (defcustom org-babel-chatgpt-model "gpt-3.5-turbo"
   "Default model."
@@ -28,12 +29,6 @@
   :type 'string
   :group 'org-babel-chatgpt)
 
-(defun org-babel-chatgpt-initialize ()
-  "Initialize."
-  (mapc (lambda (a)
-          (org-babel-make-language-alias a "chatgpt"))
-        org-babel-chatgpt-aliases))
-
 (defcustom org-babel-chatgpt-aliases '()
   "Aliases."
   :type 'list
@@ -41,6 +36,12 @@
   :set (lambda (var val)
          (set var val)
          (org-babel-chatgpt-initialize)))
+
+(defun org-babel-chatgpt-initialize ()
+  "Initialize."
+  (mapc (lambda (a)
+          (org-babel-make-language-alias a "chatgpt"))
+        org-babel-chatgpt-aliases))
 
 (defvar org-babel-default-header-args:chatgpt
   '(
@@ -92,7 +93,10 @@
         (save-excursion
           (goto-char (org-babel-where-is-src-block-result))
           (forward-line)
-          (forward-line)
+          (when (org-babel-when-in-src-block)
+            (end-of-line)
+            (insert (format " :chatgpt-result t :thread %s" current-thread))
+            (forward-line))
           (chatgpt-response-parse-and-insert
            (buffer-name) (point)
            (chatgpt-request chatgpt-url-chat (chatgpt-request-data messages)))))
@@ -121,11 +125,13 @@
                  (thread (cdr (assq :thread params)))
                  (value (org-element-property :value block))
                  (lang (org-element-property :language block))
+                 (is-result (cdr (assq :chatgpt-result params)))
                  (body (nth 1 info)))
-            (when (and (or (string= lang "chatgpt")
-                           (member lang org-babel-chatgpt-aliases))
+            (when (and thread
                        (string= current-thread thread))
-              (push `(,role (:content . ,value)) blocks)
+              (if is-result
+                  (push `((:role . assistant) (:content . ,value)) blocks)
+                (push `(,role (:content . ,value)) blocks))
               (if (and current-body (string= current-body body))
                   (setq stop t)
                 (save-excursion
