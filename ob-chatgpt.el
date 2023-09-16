@@ -58,11 +58,7 @@
 
 (defun org-babel-execute:chatgpt (body params)
   "Execute a block of ChatGPT."
-  (let* ((current-thread (cdr (assq :thread params)))
-         (messages (org-babel-chatgpt-get-chat-thread current-thread body))
-         (model (or (cdr (assq :model params)) org-babel-chatgpt-model)))
-    "..."
-    ))
+  "\n")
 
     ;;; old
     ;; (if to-org
@@ -86,21 +82,22 @@
 
 (defun org-babel-chatgpt-run-hook ()
   "doc"
-  (let ((lang (nth 0 (org-babel-get-src-block-info))))
+  (let* ((info (org-babel-get-src-block-info))
+         (lang (nth 0 info)))
     (when (or (string= lang "chatgpt")
               (member lang org-babel-chatgpt-aliases))
-  (save-excursion
-    (goto-char (org-babel-where-is-src-block-result))
-    (forward-line)
-    (forward-line)
-    (insert "hey") ;; todo
-    (message
-     (buffer-substring
-      (point) (org-element-property :end (org-element-at-point)))))
-  )
-      ))
-(add-hook 'org-babel-after-execute-hook 'org-babel-chatgpt-run-hook)
-; (remove-hook 'org-babel-after-execute-hook 'org-babel-chatgpt-run-hook)
+      (let* ((current-thread (cdr (assq :thread (nth 2 info))))
+             (model (or (cdr (assq :model (nth 2 info))) org-babel-chatgpt-model))
+             (messages (org-babel-chatgpt-get-chat-thread current-thread)))
+        (save-excursion
+          (goto-char (org-babel-where-is-src-block-result))
+          (forward-line)
+          (forward-line)
+          (chatgpt-response-parse-and-insert
+           (buffer-name) (point)
+           (chatgpt-request chatgpt-url-chat (chatgpt-request-data messages)))))
+      )))
+  (add-hook 'org-babel-after-execute-hook 'org-babel-chatgpt-run-hook)
 
 (defun org-babel-chatgpt-read-src-block-result-value ()
   "Read result block."
