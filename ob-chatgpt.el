@@ -59,7 +59,7 @@
   "Add spaces around backticks in STR."
   (replace-regexp-in-string " ?`\\([^`'\n]+\\)` ?" " `\\1` " str))
 
-(defun org-babel-execute:chatgpt (body params)
+(defun org-babel-execute:chatgpt (_body _params)
   "Execute a block of ChatGPT."
   "\n")
 
@@ -84,7 +84,7 @@
     ;;   result)))
 
 (defun org-babel-chatgpt-run-hook ()
-  "doc"
+  "Run chatgpt request."
   (let* ((info (org-babel-get-src-block-info))
          (lang (nth 0 info)))
     (when (or (string= lang "chatgpt")
@@ -113,35 +113,34 @@
         (goto-char c)
         (org-babel-read-result)))))
 
-(defun org-babel-chatgpt-get-chat-thread (current-thread &optional current-body)
-  "Get all code blocks with CURRENT-THREAD for chat."
-  (require 'org-element)
-  (let ((blocks '())
-        (stop nil))
+(defun org-babel-chatgpt-get-chat-thread (current-thread &optional all)
+  "Get all code blocks with CURRENT-THREAD for chat.
+
+if ALL is not nil, try to collect all messages includes after point."
+  (let ((blocks '()))
     (org-element-map (org-element-parse-buffer) 'src-block
       (lambda (block)
-        (unless stop
-          (let* ((info (org-babel-get-src-block-info t block))
-                 (params (nth 2 info))
-                 (role (assq :role params))
-                 (thread (cdr (assq :thread params)))
-                 (value (org-element-property :value block))
-                 (lang (org-element-property :language block))
-                 (is-result (cdr (assq :chatgpt-result params)))
-                 (body (nth 1 info)))
-            (when (and thread
-                       (string= current-thread thread))
-              (if is-result
-                  (push `((:role . assistant) (:content . ,value)) blocks)
-                (push `(,role (:content . ,value)) blocks))
-              (if (and current-body (string= current-body body))
-                  (setq stop t)
-                (save-excursion
-                  (goto-char (org-element-property :begin block))
-                  (let ((result (org-babel-chatgpt-read-src-block-result-value)))
-                    (when result
-                      (push `((:role . assistant) (:content . ,result)) blocks)
-                      )))))))))
+        (let* ((info (org-babel-get-src-block-info t block))
+               (params (nth 2 info))
+               (role (assq :role params))
+               (thread (cdr (assq :thread params)))
+               (value (org-element-property :value block))
+               (lang (org-element-property :language block))
+               (is-result (cdr (assq :chatgpt-result params)))
+               (body (nth 1 info))
+               (begin (org-element-property :begin block)))
+          (when (and
+                 (and (not all) (> (point) begin))
+                 (and thread (string= current-thread thread)))
+            (if is-result
+                (push `((:role . assistant) (:content . ,value)) blocks)
+              (push `(,role (:content . ,value)) blocks))
+            (save-excursion
+              (goto-char begin)
+              (let ((result (org-babel-chatgpt-read-src-block-result-value)))
+                (when result
+                  (push `((:role . assistant) (:content . ,result)) blocks)
+                  )))))))
     (reverse blocks)))
 
 (org-babel-chatgpt-initialize)
