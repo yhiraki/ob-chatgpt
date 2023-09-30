@@ -69,45 +69,54 @@
   "Execute a block of ChatGPT."
   "\n")
 
-    ;;; old
-    ;; (if to-org
-    ;;     (progn
-    ;;       (let* ((in-file (org-babel-temp-file "chatgpt-md-"))
-    ;;              (out-file (org-babel-temp-file "chatgpt-org-"))
-    ;;              (cmd (mapconcat
-    ;;                    #'identity
-    ;;                    `("pandoc"
-    ;;                      "-t" "org"
-    ;;                      "-f" "markdown"
-    ;;                      ,in-file)
-    ;;                    " ")))
-    ;;         (unless (executable-find "pandoc")
-    ;;           (error "Command \"pandoc\" not found"))
-    ;;         (with-temp-file in-file (insert (org-babel-chatgpt-add-backticks-spaces result)))
-    ;;         (message "%s" cmd)
-    ;;         (org-babel-eval cmd "")
-    ;;         ))
-    ;;   result)))
+(defun org-babel-chatgpt-convert-result-block ()
+  "Use this function when point is on result block."
+    (progn
+      (let* ((in-file (org-babel-temp-file "chatgpt-md-"))
+             (out-file (org-babel-temp-file "chatgpt-org-"))
+             (cmd (mapconcat
+                   #'identity
+                   `("pandoc"
+                     "-t" "org"
+                     "-f" "markdown"
+                     ,in-file)
+                   " ")))
+        (unless (executable-find "pandoc")
+          (error "Command \"pandoc\" not found"))
+        (with-temp-file in-file (insert (org-babel-chatgpt-add-backticks-spaces result)))
+        (message "%s" cmd)
+        (org-babel-eval cmd "")
+        ))
+    result)
+
+(defun org-babel-chatgpt-update-result (info callback)
+  "INFO is a result of 'org-babel-get-src-block-info'.
+CALLBACK is run after insert result."
+  (let* ((params (nth 2 info))
+         (current-thread (cdr (assq :thread params)))
+         (model (or (cdr (assq :model params)) org-babel-chatgpt-model))
+         (to-org (cdr (assq :to-org params)))
+         (messages (org-babel-chatgpt-get-chat-thread current-thread)))
+    (message "%s" to-org)
+    (save-excursion
+      (goto-char (org-babel-where-is-src-block-result))
+      (forward-line)
+      (when (org-babel-when-in-src-block)
+        (end-of-line)
+        (insert (format " :chatgpt-result t :thread %s" current-thread)))
+      (forward-line)
+      (chatgpt-response-parse-and-insert
+       (buffer-name) (point)
+       (chatgpt-request chatgpt-url-chat (chatgpt-request-data messages) callback)))))
 
 (defun org-babel-chatgpt-run-hook ()
   "Run chatgpt request."
   (let* ((info (org-babel-get-src-block-info))
          (lang (nth 0 info)))
     (when (org-babel-chatgpt--lang-is-chatgpt lang)
-      (let* ((current-thread (cdr (assq :thread (nth 2 info))))
-             (model (or (cdr (assq :model (nth 2 info))) org-babel-chatgpt-model))
-             (messages (org-babel-chatgpt-get-chat-thread current-thread)))
-        (save-excursion
-          (goto-char (org-babel-where-is-src-block-result))
-          (forward-line)
-          (when (org-babel-when-in-src-block)
-            (end-of-line)
-            (insert (format " :chatgpt-result t :thread %s" current-thread)))
-          (forward-line)
-          (chatgpt-response-parse-and-insert
-           (buffer-name) (point)
-           (chatgpt-request chatgpt-url-chat (chatgpt-request-data messages)))))
-      )))
+      (org-babel-chatgpt-update-result
+       info
+       #'(lambda (_status) (org-babel-chatgpt-convert-result-block))))))
 (add-hook 'org-babel-after-execute-hook 'org-babel-chatgpt-run-hook)
 
 (defun org-babel-chatgpt-read-src-block-result-value ()
