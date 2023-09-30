@@ -31,11 +31,17 @@
 
 (defvar org-babel-chatgpt-aliases nil)
 
+(defconst org-babel-chatgpt-lang "chatgpt")
+
 (defun org-babel-chatgpt-initialize ()
   "Initialize."
   (mapc (lambda (a)
-          (org-babel-make-language-alias a "chatgpt"))
+          (org-babel-make-language-alias a org-babel-chatgpt-lang))
         org-babel-chatgpt-aliases))
+
+(defun org-babel-chatgpt--lang-is-chatgpt (lang)
+  (or (string= lang org-babel-chatgpt-lang)
+      (member lang org-babel-chatgpt-aliases)))
 
 (defcustom org-babel-chatgpt-aliases '()
   "Aliases."
@@ -87,8 +93,7 @@
   "Run chatgpt request."
   (let* ((info (org-babel-get-src-block-info))
          (lang (nth 0 info)))
-    (when (or (string= lang "chatgpt")
-              (member lang org-babel-chatgpt-aliases))
+    (when (org-babel-chatgpt--lang-is-chatgpt lang)
       (let* ((current-thread (cdr (assq :thread (nth 2 info))))
              (model (or (cdr (assq :model (nth 2 info))) org-babel-chatgpt-model))
              (messages (org-babel-chatgpt-get-chat-thread current-thread)))
@@ -103,7 +108,7 @@
            (buffer-name) (point)
            (chatgpt-request chatgpt-url-chat (chatgpt-request-data messages)))))
       )))
-  (add-hook 'org-babel-after-execute-hook 'org-babel-chatgpt-run-hook)
+(add-hook 'org-babel-after-execute-hook 'org-babel-chatgpt-run-hook)
 
 (defun org-babel-chatgpt-read-src-block-result-value ()
   "Read result block."
