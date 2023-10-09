@@ -16,7 +16,6 @@
 (require 'chatgpt)
 (require 'json)
 (require 'ob)
-(require 'org-element)
 (require 's)
 
 (defcustom org-babel-chatgpt-model "gpt-3.5-turbo"
